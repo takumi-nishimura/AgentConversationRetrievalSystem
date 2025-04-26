@@ -4,11 +4,16 @@ import duckdb
 
 logger = logging.getLogger(__name__)
 
+# シーケンス定義
+CREATE_CONVERSATIONS_ID_SEQUENCE_SQL = """
+CREATE SEQUENCE IF NOT EXISTS conversations_id_seq START 1;
+"""
+
 # テーブルスキーマ定義 (要件定義書 4.3 準拠)
 # conversations テーブル: 会話の生データ
 CREATE_CONVERSATIONS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS conversations (
-    id INTEGER PRIMARY KEY,                 -- 発話ごとのユニークID (自動採番を想定)
+    id BIGINT DEFAULT nextval('conversations_id_seq') PRIMARY KEY, -- 発話ごとのユニークID (シーケンスによる自動採番)
     session_id VARCHAR NOT NULL,            -- 会話セッションID
     agent_id VARCHAR NOT NULL,              -- 発話したエージェントのID
     utterance_text VARCHAR NOT NULL,        -- 発話内容
@@ -49,7 +54,9 @@ def initialize_database(connection: duckdb.DuckDBPyConnection):
         duckdb.Error: テーブル作成に失敗した場合。
     """
     try:
-        logger.info("Initializing database tables if they don't exist...")
+        logger.info("Initializing database sequence and tables if they don't exist...")
+        connection.execute(CREATE_CONVERSATIONS_ID_SEQUENCE_SQL)  # シーケンスを作成
+        logger.info("Checked/Created 'conversations_id_seq' sequence.")
         connection.execute(CREATE_CONVERSATIONS_TABLE_SQL)
         logger.info("Checked/Created 'conversations' table.")
         connection.execute(CREATE_CONVERSATION_SUMMARIES_TABLE_SQL)
